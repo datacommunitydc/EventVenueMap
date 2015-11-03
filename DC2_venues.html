@@ -2,138 +2,196 @@
 <html>
   <head>
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no"/>
-    <script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=true"></script>
+    <script src="http://maps.google.com/maps/api/js?sensor=true"></script>
     <script type="text/javascript" src="http://mbostock.github.com/d3/d3.js?1.29.1"></script>
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/queue-async/1.0.7/queue.min.js"></script>
     <style type="text/css">
-html, body, #map {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-}
-.stations, .stations svg {
-  position: absolute;
-}
-.stations svg {
-  width: 60px;
-  height: 20px;
-  padding-right: 100px;
-  font: 10px sans-serif;
-}
-.stations circle {
-  fill: brown;
-  stroke: black;
-  stroke-width: 1.5px;
-}
+        html, body, #map {
+          width: 100%;
+          height: 100%;
+          margin: 0;
+          padding: 0;
+        }
+        .stations, .stations svg {
+          position: absolute;
+        }
+        .stations svg {
+          width: 60px;
+          height: 20px;
+          padding-right: 100px;
+          font: 10px sans-serif;
+        }
+        .stations circle {
+          fill: brown;
+          stroke: black;
+          stroke-width: 1.5px;
+        }
     </style>
   </head>
-  <body>
+    <body>
     <div id="map"></div>
     <script type="text/javascript">
 
-    // Create the Google Map…
-    var map = new google.maps.Map(d3.select("#map").node(), {
-      zoom: 10,
-      center: new google.maps.LatLng(38.8977, -77.0366),
-      mapTypeId: google.maps.MapTypeId.ROADMAP
-    });
-
-    Venue_Overlay = function(data) {
-      console.log(data)
-      var overlay = new google.maps.OverlayView();
-      // Add the container when the overlay is added to the map.
-      overlay.onAdd = function() {
-        var layer = d3.select(this.getPanes().overlayLayer).append("div")
-            .attr("class", "stations");
-        // Draw each marker as a separate SVG element.
-        // We could use a single SVG, but what size would it have?
-        overlay.draw = function() {
-          var projection = this.getProjection(),
-              padding = 10;
-          var marker = layer.selectAll("svg")
-    //          .data(d3.entries(data))
-              .data(data)
-              .each(transform) // update existing markers
-            .enter().append("svg:svg")
-              .each(transform)
-              .attr("class", "marker");
-          // Add a circle.
-          marker.append("svg:circle")
-              .attr("r", 4.5)
-              .attr("cx", padding)
-              .attr("cy", padding);
-          // Add a label.
-          marker.append("svg:text")
-              .attr("x", padding + 7)
-              .attr("y", padding)
-              .attr("dy", ".31em")
-              .text(function(d) { return d.Name; }); // If the spreadsheet columns change, this is most likely going to have to change.
-          function transform(d) {
-            d = new google.maps.LatLng(d.value[1], d.value[0]);
-            d = projection.fromLatLngToDivPixel(d);
-            return d3.select(this)
-                .style("left", (d.x - padding) + "px")
-                .style("top", (d.y - padding) + "px");
-          }
+        var map;
+        Venue_Overlay = function(data) {
+          console.log(data)
+          var overlay = new google.maps.OverlayView();
+          // Add the container when the overlay is added to the map.
+          overlay.onAdd = function() {
+            var layer = d3.select(this.getPanes().overlayLayer)
+                    .append("div")
+                    .attr("class", "stations");
+            // Draw each marker as a separate SVG element.
+            // We could use a single SVG, but what size would it have?
+            overlay.draw = function() {
+              var projection = this.getProjection(),
+                  padding = 10;
+              var marker = layer.selectAll("svg")
+        //          .data(d3.entries(data))
+                  .data(data)
+                  .each(transform) // update existing markers
+                .enter().append("svg:svg")
+                  .each(transform)
+                  .attr("class", "marker");
+              // Add a circle.
+              marker.append("svg:circle")
+                  .attr("r", 4.5)
+                  .attr("cx", padding)
+                  .attr("cy", padding);
+              // Add a label.
+              marker.append("svg:text")
+                  .attr("x", padding + 7)
+                  .attr("y", padding)
+                  .attr("dy", ".31em")
+                  .text(function(d) {
+                          return d.name;
+                      }); // If the spreadsheet columns change, this is most likely going to have to change.
+              function transform(d) {
+                d = new google.maps.LatLng(d.latlon[0], d.latlon[1]);
+                d = projection.fromLatLngToDivPixel(d);
+                return d3.select(this)
+                    .style("left", (d.x - padding) + "px")
+                    .style("top", (d.y - padding) + "px");
+              }
+            };
+          };
+          // Bind our overlay to the map…
+          overlay.setMap(map);
         };
-      };
-      // Bind our overlay to the map…
-      overlay.setMap(map);
-    };
 
-    Parse_Master_List = function(text) {
-        var geocoder = new google.maps.Geocoder();
-        d3.csv.parse(text).forEach(function(d,i){
+//        Parse_Master_List = function(text) {
+//            var venues = new Array();
+//            var geocoder = new google.maps.Geocoder();
+//            d3.csv.parse(text).forEach(function(d,i){
+//
+//                var address = d["Address"] + ", " + d["City/State"];
+//                var latitude, longitude;
+//                geocoder.geocode( {'address': address}, function(results, status) {
+//
+//                    if (status === google.maps.GeocoderStatus.OK) {
+//                        latitude  = results[0].geometry.location.lat();
+//                        longitude = results[0].geometry.location.lng();
+//                    } else {
+//                      alert('Geocode was not successful for the following reason: ' + status);
+//                    }
+//                    console.log("address: ",address,"  Lat/Lon: ",[latitude,longitude])
+//                });
+//                venues[i] = {"key":d["Name"], "value":[longitude,latitude]};
+//            });
+//        };
 
-            var address = d["Address"] + ", " + d["City/State"];
-            var latitude, longitude;
-            geocoder.geocode( { 'address': address}, function(results, status) {
+        function sheetLoaded(venuesSheet) {
 
-                if (status == google.maps.GeocoderStatus.OK) {
-                    latitude  = results[0].geometry.location.lat();
-                    longitude = results[0].geometry.location.lng();
-                }
-                console.log("address: ",address,"  Lat/Lon: ",[latitude,longitude])
+            // Create the Google Map…
+            map = new google.maps.Map(d3.select("#map").node(), {
+                zoom: 12,
+                center: new google.maps.LatLng(38.8977, -77.0366),
+                mapTypeId: google.maps.MapTypeId.ROADMAP
             });
-            venues[i] = {"key":d["Name"], "value":[longitude,latitude]};
-        });
-    };
 
-    var venues = new Array();
-    d3.text("DC2_Master_Space_List-Sheet1.csv", function(text) {
-      queue()
-        .defer(Parse_Master_List,text)
-        .defer(Venue_Overlay,venues)
-        .await(function(error, file1, file2) { console.log(file1, file2); });
+            // Parse the google response
+            var venues = venuesSheet.feed.entry; // List of objects
+            var num_venues = venues.length;
+            var data = new Array();
+            for (v=0;v<num_venues;v++) {
+                data.push({
+                    'name':venues[v].gsx$name.$t,
+                    'latlon':[parseFloat(venues[v].gsx$latitude.$t),
+                              parseFloat(venues[v].gsx$longitude.$t)]
+                });
+            };
 
-    });
+            Venue_Overlay(data);
 
-// You'll probably also want to convert your columns to numbers, because they'll be strings by default.
-// Assume they are all numbers, you could say:
-//d3.text("data/testnh.csv", function(text) {
-//  var data = d3.csv.parseRows(text).map(function(row) {
-//    return row.map(function(value) {
-//      return +value;
-//    });
-//  });
-//  console.log(data);
-//});
+//            console.log(venuesSheet);
+//            d3.text("DC2_Master_Space_List-Sheet1.csv", function(text) {
+//                queue()
+//                    .defer(Parse_Master_List,text)
+//                    .defer(Venue_Overlay,venuesSheet)
+//                    .await(function(error, file1, file2) { console.log(file1, file2); });
+//            });
+        };
 
-//var venues;
-//function loadData() {
-//  var url="https://docs.google.com/spreadsheets/d/1XUDG6h0bZ8RDofSfIy1Xc_QxoijktpmWTU-i4cILcow/pub?gid=0&single=true&output=csv";
-//  xmlhttp=new XMLHttpRequest();
-//  xmlhttp.onreadystatechange = function() {
-//    if(xmlhttp.readyState == 4 && xmlhttp.status==200){
-//        venues = xmlhttp.responseText
-////      document.getElementById("display").innerHTML = xmlhttp.responseText;
-//    }
-//  };
-//  xmlhttp.open("GET",url,true);
-//  xmlhttp.send(null);
-//}
-    </script>
-  </body>
+    // You'll probably also want to convert your columns to numbers, because they'll be strings by default.
+    // Assume they are all numbers, you could say:
+    //d3.text("data/testnh.csv", function(text) {
+    //  var data = d3.csv.parseRows(text).map(function(row) {
+    //    return row.map(function(value) {
+    //      return +value;
+    //    });
+    //  });
+    //  console.log(data);
+    //});
+
+    //var venues;
+    //function loadData() {
+    //  var url="https://docs.google.com/spreadsheets/d/1XUDG6h0bZ8RDofSfIy1Xc_QxoijktpmWTU-i4cILcow/pub?gid=0&single=true&output=csv";
+    //  xmlhttp=new XMLHttpRequest();
+    //  xmlhttp.onreadystatechange = function() {
+    //    if(xmlhttp.readyState == 4 && xmlhttp.status==200){
+    //        venues = xmlhttp.responseText
+    ////      document.getElementById("display").innerHTML = xmlhttp.responseText;
+    //    }
+    //  };
+    //  xmlhttp.open("GET",url,true);
+    //  xmlhttp.send(null);
+    //}
+        </script>
+    </body>
+    <!--<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBcY0Lc0gM2_PG8vRQqPiUs-vJtszG_jUY&signed_in=true&callback=InitMap" async defer></script>-->
+    <!--<script src="https://spreadsheets.google.com/feeds/cells/1XUDG6h0bZ8RDofSfIy1Xc_QxoijktpmWTU-i4cILcow/public/values?alt=json-in-script&callback=sheetLoaded"></script>-->
+    <!--<script src="https://spreadsheets.google.com/feeds/cells/1XUDG6h0bZ8RDofSfIy1Xc_QxoijktpmWTU-i4cILcow/od6/public/values?alt=json-in-script&callback=sheetLoaded"></script>-->
+    <script src="https://spreadsheets.google.com/feeds/list/1XUDG6h0bZ8RDofSfIy1Xc_QxoijktpmWTU-i4cILcow/od6/public/values?alt=json-in-script&callback=sheetLoaded"></script>
+    <!--<script src="https://spreadsheets.google.com/feeds/cells/1XUDG6h0bZ8RDofSfIy1Xc_QxoijktpmWTU-i4cILcow/-u3c65o/public/values?alt=json-in-script&callback=sheetLoaded"></script>-->
+
 </html>
+
+<!--<?xml version='1.0' encoding='UTF-8'?>-->
+<!--<feed xmlns='http://www.w3.org/2005/Atom' xmlns:openSearch='http://a9.com/-/spec/opensearchrss/1.0/' xmlns:gs='http://schemas.google.com/spreadsheets/2006'>-->
+    <!--<id>https://spreadsheets.google.com/feeds/worksheets/1XUDG6h0bZ8RDofSfIy1Xc_QxoijktpmWTU-i4cILcow/private/full</id>-->
+    <!--<updated>2015-10-31T15:35:54.943Z</updated>-->
+    <!--<category scheme='http://schemas.google.com/spreadsheets/2006' term='http://schemas.google.com/spreadsheets/2006#worksheet'/>-->
+    <!--<title type='text'>DC2 Master Space List</title>-->
+    <!--<link rel='alternate' type='application/atom+xml' href='https://docs.google.com/spreadsheets/d/1XUDG6h0bZ8RDofSfIy1Xc_QxoijktpmWTU-i4cILcow/edit'/>-->
+    <!--<link rel='http://schemas.google.com/g/2005#feed' type='application/atom+xml' href='https://spreadsheets.google.com/feeds/worksheets/1XUDG6h0bZ8RDofSfIy1Xc_QxoijktpmWTU-i4cILcow/private/full'/>-->
+    <!--<link rel='http://schemas.google.com/g/2005#post' type='application/atom+xml' href='https://spreadsheets.google.com/feeds/worksheets/1XUDG6h0bZ8RDofSfIy1Xc_QxoijktpmWTU-i4cILcow/private/full'/>-->
+    <!--<link rel='self' type='application/atom+xml' href='https://spreadsheets.google.com/feeds/worksheets/1XUDG6h0bZ8RDofSfIy1Xc_QxoijktpmWTU-i4cILcow/private/full'/>-->
+    <!--<author><name>murphsp1</name><email>murphsp1@gmail.com</email></author>-->
+    <!--<openSearch:totalResults>1</openSearch:totalResults>-->
+    <!--<openSearch:startIndex>1</openSearch:startIndex>-->
+    <!--<entry>-->
+        <!--<id>https://spreadsheets.google.com/feeds/worksheets/1XUDG6h0bZ8RDofSfIy1Xc_QxoijktpmWTU-i4cILcow/private/full/od6</id>-->
+        <!--<updated>2015-10-31T15:35:54.943Z</updated>-->
+        <!--<category scheme='http://schemas.google.com/spreadsheets/2006' term='http://schemas.google.com/spreadsheets/2006#worksheet'/>-->
+        <!--<title type='text'>Sheet1</title>-->
+        <!--<content type='text'>Sheet1</content>-->
+        <!--<link rel='http://schemas.google.com/spreadsheets/2006#listfeed' type='application/atom+xml' href='https://spreadsheets.google.com/feeds/list/1XUDG6h0bZ8RDofSfIy1Xc_QxoijktpmWTU-i4cILcow/od6/private/full'/>-->
+        <!--<link rel='http://schemas.google.com/spreadsheets/2006#cellsfeed' type='application/atom+xml' href='https://spreadsheets.google.com/feeds/cells/1XUDG6h0bZ8RDofSfIy1Xc_QxoijktpmWTU-i4cILcow/od6/private/full'/>-->
+        <!--<link rel='http://schemas.google.com/visualization/2008#visualizationApi' type='application/atom+xml' href='https://docs.google.com/spreadsheets/d/1XUDG6h0bZ8RDofSfIy1Xc_QxoijktpmWTU-i4cILcow/gviz/tq?gid=0'/>-->
+        <!--<link rel='http://schemas.google.com/spreadsheets/2006#exportcsv' type='text/csv' href='https://docs.google.com/spreadsheets/d/1XUDG6h0bZ8RDofSfIy1Xc_QxoijktpmWTU-i4cILcow/export?gid=0&amp;format=csv'/>-->
+        <!--<link rel='self' type='application/atom+xml' href='https://spreadsheets.google.com/feeds/worksheets/1XUDG6h0bZ8RDofSfIy1Xc_QxoijktpmWTU-i4cILcow/private/full/od6'/>-->
+        <!--<link rel='edit' type='application/atom+xml' href='https://spreadsheets.google.com/feeds/worksheets/1XUDG6h0bZ8RDofSfIy1Xc_QxoijktpmWTU-i4cILcow/private/full/od6/-u3c65o'/>-->
+        <!--<gs:colCount>29</gs:colCount><gs:rowCount>93</gs:rowCount>-->
+    <!--</entry>-->
+<!--</feed>-->
