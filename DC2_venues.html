@@ -17,15 +17,34 @@
           position: absolute;
         }
         .stations svg {
-          width: 60px;
-          height: 20px;
-          padding-right: 100px;
+          width: 100px;
+          height: 35px;
+          /*padding-right: 100px;*/
           font: 10px sans-serif;
         }
         .stations circle {
-          fill: brown;
+          fill: blue;
           stroke: black;
           stroke-width: 1.5px;
+        }
+        .all-pointer-events {
+            pointer-events: all;
+        }
+        .no-pointer-events {
+            pointer-events: none;
+        }
+        .tooltip {
+            position: absolute;
+            z-index: 10000000000000;
+            text-align: left;
+            width: 200px;
+            height: 300px;
+            padding: 2px;
+            font: 12px sans-serif;
+            background: lightsteelblue;
+            border: 2px;
+            border-radius: 4px;
+            /*pointer-events: none;*/
         }
     </style>
   </head>
@@ -39,7 +58,8 @@
           var overlay = new google.maps.OverlayView();
           // Add the container when the overlay is added to the map.
           overlay.onAdd = function() {
-                var layer = d3.select(this.getPanes().overlayLayer)
+//                var layer = d3.select(this.getPanes().overlayLayer)
+                var layer = d3.select(this.getPanes().overlayMouseTarget)
                     .append("div")
                     .attr("class", "stations");
                 // Draw each marker as a separate SVG element.
@@ -49,18 +69,21 @@
                       padding = 10;
                     var marker = layer.selectAll("svg")
                     //          .data(d3.entries(data))
-                      .data(data)
-                      .each(transform) // update existing markers
+                        .data(data)
+                        .each(transform) // update existing markers
                     .enter().append("svg:svg")
-                      .each(transform)
-                      .attr("class", "marker");
+                        .each(transform)
+                        .attr("class", "marker"); // no-pointer-events");
                     // Add a circle.
                     marker.append("svg:circle")
-                      .attr("r", 4.5)
-                      .attr("cx", padding)
-                      .attr("cy", padding);
+                        .attr("class","child")
+                        .attr("r", 4.5)
+                        .attr("cx", padding)
+                        .attr("cy", padding)
+                        .on("mouseenter",Create_Tooltip); //.on("mouseout",Remove_Tooltip);
                     // Add a label.
                     marker.append("svg:rect")
+                        .attr("class","no-pointer-events")
                         .attr("x", padding + 7)
                         .attr("y", padding - 7)
                         .attr("width",function(d){
@@ -70,21 +93,53 @@
                         .attr("fill","white");
 
                     marker.append("svg:text")
+                        .attr("class","no-pointer-events")
                         .attr("x", padding + 7)
                         .attr("y", padding)
                         .attr("dy", ".36em")
                         .attr("font-weight","bold")
+                        .style("pointer-events","none")
                         .text(function(d) {
                               return d.name;
                           }); // If the spreadsheet columns change, this is most likely going to have to change.
+
                     function transform(d) {
-                    d = new google.maps.LatLng(d.latlon[0], d.latlon[1]);
-                    d = projection.fromLatLngToDivPixel(d);
-                    return d3.select(this)
-                        .style("left", (d.x - padding) + "px")
-                        .style("top", (d.y - padding) + "px");
+                        d = new google.maps.LatLng(d.latlon[0], d.latlon[1]);
+                        d = projection.fromLatLngToDivPixel(d);
+                        return d3.select(this)
+                            .style("left", (d.x - padding) + "px")
+                            .style("top", (d.y - padding) + "px");
                     }
                 };
+
+                function Create_Tooltip(d) {
+
+                    var this_element = d3.select(this);
+
+//                    https://developers.google.com/maps/documentation/javascript/infowindows
+//                    http://stackoverflow.com/questions/5634991/styling-google-maps-infowindow
+                    var myLatLng = {lat: d.latlon[0], lng: d.latlon[1]};
+
+                    var content_string =
+                            '<div>'+
+                            '<h1><b>'+ d.name +'</b></h1>' +
+                            '<p><b>Seating/Capacity: </b>'+ d.seating +'/'+ d.maxcapacity +'</p>' +
+                            '<p><b>Food: </b>'+ d.food +'</p>' +
+                            '<p><b>Sponsor: </b>'+ d.sponsor +'</p>' +
+                            '<p><b>Security: </b>'+ d.security +'</p>' +
+                            '<p><b>WiFi: </b>'+ d.wifi +'</p>' +
+                            '<p><b>Networking Space: </b>'+ d.separatenetworking +'</p>' +
+                            '<p><b>DC2 Contact: </b><a href="mailto:'+ d.dc2email +'?Subject=DC2%20Venue%20Request" target="_blank">'+ d.dc2contact +'</a></p>' +
+                            '</div>';
+
+                    var infowindow = new google.maps.InfoWindow({
+                        position: myLatLng,
+                        content: content_string
+                    });
+
+                    infowindow.open(map); // , marker);
+
+                }
           };
           // Bind our overlay to the map…
           overlay.setMap(map);
@@ -128,7 +183,16 @@
                 data.push({
                     'name':venues[v].gsx$name.$t,
                     'latlon':[parseFloat(venues[v].gsx$latitude.$t),
-                              parseFloat(venues[v].gsx$longitude.$t)]
+                              parseFloat(venues[v].gsx$longitude.$t)],
+                    'seating':venues[v].gsx$seating.$t,
+                    'maxcapacity':venues[v].gsx$maxcapacity.$t,
+                    'food':venues[v].gsx$food.$t,
+                    'sponsor':venues[v].gsx$sponsor.$t,
+                    'security':venues[v].gsx$security.$t,
+                    'wifi':venues[v].gsx$wifi.$t,
+                    'separatenetworking':venues[v].gsx$separatenetworking.$t,
+                    'dc2contact':venues[v].gsx$dc2contact.$t,
+                    'dc2email':venues[v].gsx$dc2email.$t,
                 });
             };
 
